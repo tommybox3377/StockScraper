@@ -49,8 +49,6 @@ for i in range(1, len(df1.index)):
     break
 
 
-# print(df2)
-
 # df2 = df2.append(df1.iloc[1:2])
 # # df2 = df2.append(df1.iloc[1:2])
 #
