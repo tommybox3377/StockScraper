@@ -1,7 +1,9 @@
 import pandas as pd
 import datetime
+import MySQL
+import math
 
-xlsx_file = r"Desktop\Data.xlsx"
+xlsx_file = r"C:\Users\twmar\OneDrive\Documents\Data\Stocks\Data.xlsx"
 
 
 def timestamp_to_datetime(time):
@@ -19,47 +21,49 @@ def check_time(time1, time2):
         return False
 
 
-df1 = pd.read_excel(xlsx_file)
-df1["datetime"] = df1["datetime"].apply(lambda x: timestamp_to_datetime(x))
-df1 = df1.set_index("datetime")
-df2 = pd.DataFrame(df1.iloc[0:1])
-df2 = pd.DataFrame(df1.iloc[0:1])
-print(df1)
+
+def add_all_the_minutes():
+    stop_dt = datetime.datetime(year=2022, month=2, day=24, hour=10, minute=37)
+    next_min = datetime.datetime(year=2019, month=10, day=21, hour=10, minute=50)
+
+    while next_min < stop_dt:
+         MySQL.my_cursor.execute(f"INSERT INTO raw_data (datetime) VALUES ('{next_min}')")
+         next_min = next_min + datetime.timedelta(minutes=1)
+
+    MySQL.mydb.commit()
+    print("added minutes")
 
 
-for i in range(1, len(df1.index)):
-    time1 = pd.DataFrame(df1.iloc[i:i+1])
-    time2 = pd.DataFrame(df2.iloc[-1])
-    datetime1 = time1.index[0]
-    datetime2 = time2.index[0]
+def import_from_xl_to_db():
+    df1 = pd.read_excel(xlsx_file)
+    df1["datetime"] = df1["datetime"].apply(lambda x: timestamp_to_datetime(x))
+    print("starting")
+    for i in range(0, len(df1.index)):
+        s = df1.iloc[i].fillna("NULL")
+        dt = s.loc["datetime"]
+        gold = s.loc["Gold"]
+        oil = s.loc["Crude Oil"]
+        DJ = s.loc["Dow Jones"]
+        SP = s.loc["S&P 500"]
+        NAS = s.loc["NASDAQ"]
+        gUSD = s.loc["Global USD"]
+        aDJIA = s.loc["Asia DJIA"]
+        n225 = s.loc["NIKKEI 225"]
+        ftse = s.loc["FTSE 100"]
+        e_u = s.loc["EUR/USD"]
+        u_j = s.loc["USD/JPY"]
+        u_c = s.loc["USD/CNY"]
+        u10y = s.loc["U.S. 10 Yr. Note"]
+        j10y = s.loc["JP 10 Yr Bond"]
+        g10y = s.loc["Germ. 10 Yr Bond"]
 
-    print(time1)
-    print(time2)
-
-    # datetime2 = time2["datetime"]
-    print(datetime1)
-    print(datetime2)
-
-    # print(check_time(datetime1, datetime2))
-
-    # time2 = pd.DataFrame(df2.iloc[-1])
-    #
-    # print(time1)
-    # print(time2)
-    break
-
-
-# df2 = df2.append(df1.iloc[1:2])
-# # df2 = df2.append(df1.iloc[1:2])
-#
-#
-#
-#
-#
-# print(df1)
-# print(df2)
+        MySQL.my_cursor.execute(f"UPDATE raw_data SET Gold = {gold}, CrudeOil = {oil}, DowJones = {DJ}, SP500 = {SP}, NASDAQ = {NAS}, GlobalUSD = {gUSD}, ASIADJIA = {aDJIA}, NIKKEI225 = {n225}, FTSE100 = {ftse}, EURUSD = {e_u}, USDJPY = {u_j}, USDCNY = {u_c}, US10YRNOTE = {u10y}, JP10YRBOND = {j10y}, GER10YRBOND = {g10y} WHERE datetime = '{dt}'")
+        # print(str(dt) + f"UPDATE raw_data SET Gold = {gold}, CrudeOil = {oil}, DowJones = {DJ}, SP500 = {SP}, NASDAQ = {NAS}, GlobalUSD = {gUSD}, ASIADJIA = {aDJIA}, NIKKEI225 = {n225}, FTSE100 = {ftse}, EURUSD = {e_u}, USDJPY = {u_j}, USDCNY = {u_c}, US10YRNOTE = {u10y}, JP10YRBOND = {j10y}, GER10YRBOND = {g10y} WHERE datetime = '{dt}'")
+    MySQL.mydb.commit()
 
 
-# f = open("testdata.csv", "a")
-# f.write(df1.to_csv(index=False))
-# f.close()
+add_all_the_minutes()
+# import_from_xl_to_db()
+# MySQL.my_cursor.execute("TRUNCATE TABLE raw_data")
+
+#TODO https://finance.yahoo.com/quote/%5ETNX/history?p=^TNX&.tsrc=fin-srch
