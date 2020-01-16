@@ -1,13 +1,15 @@
 import pandas as pd
 import datetime
 import MySQL
-import math
 
 xlsx_file = r"C:\Users\twmar\OneDrive\Documents\Data\Stocks\Data.xlsx"
 
 
-def timestamp_to_datetime(time):
-    return time.to_pydatetime().replace(second=0, microsecond=0)
+def clean_datetime(time):
+    if time.to_pydatetime() < datetime.datetime(year=2019, month=10, day=24, hour=10, minute=38):
+        return time.to_pydatetime().replace(second=0, microsecond=0) + datetime.timedelta(hours=4)
+    else:
+        return time.to_pydatetime().replace(second=0, microsecond=0)
 
 
 def return_next_min(time):
@@ -36,7 +38,7 @@ def add_all_the_minutes():
 
 def import_from_xl_to_db():
     df1 = pd.read_excel(xlsx_file)
-    df1["datetime"] = df1["datetime"].apply(lambda x: timestamp_to_datetime(x))
+    df1["datetime"] = df1["datetime"].apply(lambda x: clean_datetime(x))
     print("starting")
     for i in range(0, len(df1.index)):
         s = df1.iloc[i].fillna("NULL")
@@ -62,8 +64,8 @@ def import_from_xl_to_db():
     MySQL.mydb.commit()
 
 
-add_all_the_minutes()
-# import_from_xl_to_db()
+# add_all_the_minutes()
+import_from_xl_to_db()
 # MySQL.my_cursor.execute("TRUNCATE TABLE raw_data")
 
 #TODO https://finance.yahoo.com/quote/%5ETNX/history?p=^TNX&.tsrc=fin-srch

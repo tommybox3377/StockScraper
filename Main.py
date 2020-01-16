@@ -1,8 +1,18 @@
 from datetime import datetime, timedelta
-import re
+import mysql.connector
 import requests
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from bs4 import BeautifulSoup as bs
+
+dt = datetime.now()
+
+mydb = mysql.connector.connect(
+    host="host.adress",
+    user="user",
+    password="password",
+    database="stockdata"
+)
+
+my_cursor = mydb.cursor()
 
 future_url_base = "https://www.marketwatch.com/investing/future/"
 index_url_base = "https://www.marketwatch.com/investing/index/"
@@ -37,6 +47,10 @@ bonds = [
 ]
 
 
+def timestamp_to_datetime(time):
+    return time.replace(second=0, microsecond=0)
+
+
 def url_builder():
     urls = []
     for future in futures:
@@ -52,23 +66,40 @@ def url_builder():
 
 urls = url_builder()
 
-scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
-         "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("Creds.json", scope)
-client = gspread.authorize(creds)
-sheet = client.open("Data").sheet1
-date_times = sheet.col_values(1)
+for i, url in enumerate(urls):
+    data = bs(requests.get(url).text, "html.parser").find("meta", {"name": "price"})["content"].replace(",", "")
+    if "gold" in url:
+        gold = data
+    elif "crude%20oil%20-%20electronic" in url:
+        oil = data
+    elif "djia" in url:
+        DJ = data
+    elif "spx" in url:
+        SP = data
+    elif "comp" in url:
+        NAS = data
+    elif "gdow" in url:
+        gUSD = data
+    elif "adow?countrycode=xx" in url:
+        aDJIA = data
+    elif "/nik?countrycode=jp" in url:
+        n225 = data
+    elif "ukx?countrycode=uk" in url:
+        ftse = data
+    elif "eurusd" in url:
+        e_u = data
+    elif "usdjpy" in url:
+        u_j = data
+    elif "usdcny" in url:
+        u_c = data
+    elif "tmubmusd10y?countrycode=bx" in url:
+        u10y = data
+    elif "tmbmkjp-10y?countrycode=bx" in url:
+        j10y = data
+    elif "tmbmkde-10y?countrycode=bx" in url:
+        g10y = data
 
-write_row = len(date_times) + 1
 
-date_check = datetime.strptime(sheet.cell(write_row - 1, 1).value, "%m/%d/%Y %H:%M:%S")
-
-now = datetime.now()
-
-if (now - date_check) > timedelta(seconds=30):
-    sheet.update_cell(write_row, 1, str(now))
-    for i, url in enumerate(urls):
-        response = requests.get(urls[i])
-        m = re.search(r"\"price\" content=\"(.*)\">", response.text)
-        value = float(m.group(1).replace(",", ""))
-        sheet.update_cell(write_row, i + 2, value)
+if datetime.now() - dt < timedelta(seconds=50):
+    my_cursor.execute(f"UPDATE raw_data SET Gold = {gold}, CrudeOil = {oil}, DowJones = {DJ}, SP500 = {SP}, NASDAQ = {NAS}, GlobalUSD = {gUSD}, ASIADJIA = {aDJIA}, NIKKEI225 = {n225}, FTSE100 = {ftse}, EURUSD = {e_u}, USDJPY = {u_j}, USDCNY = {u_c}, US10YRNOTE = {u10y}, JP10YRBOND = {j10y}, GER10YRBOND = {g10y} WHERE datetime = '{timestamp_to_datetime(dt)}'")
+    mydb.commit()
